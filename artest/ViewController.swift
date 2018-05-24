@@ -53,9 +53,18 @@ class ViewController: UIViewController {
     
     
     func createSession() {
+        guard let referenceImages = ARReferenceImage.referenceImages(inGroupNamed: "AR Resources", bundle: nil) else {
+            fatalError("Missing expected asset catalog resources.")
+        }
+
         let configuration = ARWorldTrackingConfiguration()
-        configuration.planeDetection = .horizontal
-        sceneView.session.run(configuration)
+        configuration.planeDetection = .vertical
+        configuration.isLightEstimationEnabled = true
+        configuration.detectionImages = referenceImages
+        sceneView.session.run(configuration, options: [.resetTracking, .removeExistingAnchors])
+        
+        
+        
         self.setupScene()
     }
     
@@ -90,7 +99,7 @@ extension ViewController: ARSCNViewDelegate {
     func setupScene() {
         self.sceneView.showsStatistics = true
         self.sceneView.automaticallyUpdatesLighting = true
-//        self.sceneView.debugOptions = [ARSCNDebugOptions.showFeaturePoints]
+        self.sceneView.debugOptions = [ARSCNDebugOptions.showFeaturePoints]
     }
     
     func session(_ session: ARSession, didFailWithError error: Error) {
@@ -109,12 +118,22 @@ extension ViewController: ARSCNViewDelegate {
     }
     
     func renderer(_ renderer: SCNSceneRenderer, didAdd node: SCNNode, for anchor: ARAnchor) {
-        guard let planeAnchor = anchor as? ARPlaneAnchor else {
-            return
+        if let planeAnchor = anchor as? ARPlaneAnchor {
+            let pln = Plane(anchor: planeAnchor)
+            self.planes[planeAnchor.identifier] = pln
+            node.addChildNode(pln)
+        } else if let imageAnchor = anchor as? ARImageAnchor {
+            sceneView.session.setWorldOrigin(relativeTransform: imageAnchor.transform)
+            let referenceImage = imageAnchor.referenceImage
+            
+            if let scene = self.rocketScene {
+                let node = scene.rootNode.clone()
+                node.scale = SCNVector3(0.001, 0.001, 0.001)
+                node.eulerAngles.x = -.pi / 2
+                self.sceneNode.append(node)
+                self.sceneView.scene.rootNode.addChildNode(node)
+            }
         }
-        let pln = Plane(anchor: planeAnchor)
-        self.planes[planeAnchor.identifier] = pln
-        node.addChildNode(pln)
     }
     
     func renderer(_ renderer: SCNSceneRenderer, didUpdate node: SCNNode, for anchor: ARAnchor) {

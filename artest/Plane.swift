@@ -27,7 +27,9 @@ class Plane: SCNNode {
 
         let planeNode = SCNNode(geometry: pg)
         planeNode.position = SCNVector3(anchor.center.x, 0, anchor.center.z)
-        planeNode.transform = SCNMatrix4MakeRotation(-Float.pi / 2.0, 1, 0, 0)
+        if anchor.alignment == .horizontal {
+            planeNode.transform = SCNMatrix4MakeRotation(-Float.pi / 2.0, 1, 0, 0)
+        }
         
         self.setTexture()
         self.addChildNode(planeNode)
